@@ -1,3 +1,4 @@
+import {defaultOilDue} from "@/lib/metrics";
 import {db} from "@/lib/db";
 import {currentUser} from "@/lib/auth";
 import {error,jsonObject,ok,txt,dateValue,positiveInt,decimal} from "@/lib/api";
@@ -33,11 +34,12 @@ export async function POST(request:Request){
  if(mileage!==null&&mileage<vehicle.currentKm&&kind==="ODOMETER")return error("Le compteur ne peut pas reculer.");
  const occurredAt=b.occurredAt==null?new Date():dateValue(b.occurredAt);
  if(!occurredAt)return error("Date invalide");
- const nextDueKm=b.nextDueKm==null?null:positiveInt(b.nextDueKm);
+ let nextDueKm=b.nextDueKm==null?null:positiveInt(b.nextDueKm);
  if(b.nextDueKm!=null&&nextDueKm===null)return error("Échéance kilométrique invalide");
- const nextDueAt=b.nextDueAt==null?null:dateValue(b.nextDueAt);
+ let nextDueAt=b.nextDueAt==null?null:dateValue(b.nextDueAt);
  if(b.nextDueAt!=null&&!nextDueAt)return error("Date d'échéance invalide");
- const s=txt(b.status,20);
+ if(kind==="OIL_CHANGE"&&nextDueKm===null&&nextDueAt===null){const d=defaultOilDue(mileage??vehicle.currentKm,occurredAt);nextDueKm=d.nextDueKm;nextDueAt=d.nextDueAt}
+const s=txt(b.status,20);
  const status=(["OPEN","IN_PROGRESS","RESOLVED"].includes(s)?s:"RESOLVED") as IssueStatus;
  const entry=await db.$transaction(async tx=>{
   const created=await tx.vehicleEvent.create({data:{vehicleId,kind:kind as EntryKind,title,notes:txt(b.notes,4000)||null,mileage,amountCents,volumeMl,fullTank:b.fullTank===true,status,occurredAt,nextDueKm,nextDueAt}});

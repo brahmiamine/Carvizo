@@ -45,6 +45,7 @@ model Vehicle {
 }
 enum EntryKind {
  MAINTENANCE
+ OIL_CHANGE
  FUEL
  ODOMETER
  TIRE
