@@ -17,3 +17,6 @@ Photos stockées dans `STORAGE_DIR`, servies uniquement aux comptes propriétair
 Logo : `public/logo.svg` ; icônes générées par Next `src/app/icon.tsx`, `apple-icon.tsx`, `src/app/badge/route.tsx` ; Splash : `public/splash.svg`.
 ## Licence
 Tous droits réservés. Une licence open source peut être choisie ultérieurement.
+
+## Alertes et images
+Le job quotidien crée les rappels de kilométrage (30 jours), pression des pneus (30 jours depuis le dernier contrôle) et entretiens configurés. Limites de photos : 3 par véhicule et 4 par événement ; JPEG/PNG/WebP 5 Mo maximum. L'écran de lancement `/splash` est un PNG généré pour les appareils compatibles ; tous les modèles iOS ne garantissent pas la même prise en charge.

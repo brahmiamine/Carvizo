@@ -1,6 +1,6 @@
 import {db} from "@/lib/db";
 import {error,ok} from "@/lib/api";
-import {reminderWindow,shouldAskOdometer} from "@/lib/metrics";
+import {reminderWindow,shouldAskOdometer,shouldAskTireCheck} from "@/lib/metrics";
 import webpush from "web-push";
 export const runtime="nodejs";
 export const dynamic="force-dynamic";
@@ -31,13 +31,18 @@ export async function POST(request:Request){
  if(!secret||secret.length<24)return error("Cron non configuré",503);
  if(request.headers.get("authorization")!==`Bearer ${secret}`)return error("Non autorisé",401);
  const now=new Date(),month=now.toISOString().slice(0,7),push=configured();
- const vehicles=await db.vehicle.findMany({take:1000,include:{events:{where:{kind:"MAINTENANCE",OR:[{nextDueAt:{not:null}},{nextDueKm:{not:null}}]},select:{id:true,title:true,nextDueAt:true,nextDueKm:true}}}});
+ const vehicles=await db.vehicle.findMany({take:1000,include:{events:{where:{OR:[{kind:"MAINTENANCE",OR:[{nextDueAt:{not:null}},{nextDueKm:{not:null}}]},{kind:"TIRE"}]},select:{id:true,kind:true,title:true,occurredAt:true,nextDueAt:true,nextDueKm:true}}}});
  let created=0;
  for(const vehicle of vehicles){
   if(shouldAskOdometer(vehicle.lastOdometerAt,now)){
    if(await notify(vehicle.ownerId,`odometer:${vehicle.id}:${month}`,"Mets à jour ton compteur",`Combien de kilomètres affiche ta ${vehicle.make} ${vehicle.model} ?`,push))created++;
   }
+  const lastTire=vehicle.events.filter(e=>e.kind==="TIRE").sort((a,b)=>b.occurredAt.getTime()-a.occurredAt.getTime())[0];
+  if(shouldAskTireCheck(lastTire?.occurredAt??null,now)){
+   if(await notify(vehicle.ownerId,`tire:${vehicle.id}:${month}`,"Contrôle de la pression des pneus",`Pense à vérifier la pression des pneus de ta ${vehicle.make} ${vehicle.model} à froid.`,push))created++;
+  }
   for(const e of vehicle.events){
+   if(e.kind!=="MAINTENANCE")continue;
    const byDate=e.nextDueAt!==null&&e.nextDueAt.getTime()<=now.getTime()+30*86400000;
    const byKm=e.nextDueKm!==null&&reminderWindow(vehicle.currentKm,e.nextDueKm);
    if(byDate||byKm){

@@ -21,3 +21,6 @@ export function validateEntry(entry:{kind?:string;title?:string;volumeMl?:number
  if(entry.amountCents!=null&&(!Number.isSafeInteger(entry.amountCents)||entry.amountCents<0))return 'Montant incorrect.';
  return null;
 }
+
+/** Rappelle de contrôler la pression tous les 30 jours en l'absence de relevé. */
+export function shouldAskTireCheck(last:Date|null,now=new Date()):boolean {return shouldAskOdometer(last,now)}

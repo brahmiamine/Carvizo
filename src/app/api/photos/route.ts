@@ -15,6 +15,9 @@ export async function POST(request:Request){
  const vehicle=await db.vehicle.findFirst({where:{id:vehicleId,ownerId:user.id}});
  if(!vehicle)return error("Véhicule introuvable",404);
  if(eventId&&!await db.vehicleEvent.findFirst({where:{id:eventId,vehicleId}}))return error("Opération introuvable",404);
+ const existing=await db.photo.count({where:{vehicleId,eventId}});
+ const max=eventId?4:3;
+ if(existing>=max)return error("Limite de photos atteinte pour cette opération ou ce véhicule.",429);
  const storageKey=await savePhoto(bytes,mime);
  try{
   const photo=await db.photo.create({data:{vehicleId,eventId,storageKey,mime}});
