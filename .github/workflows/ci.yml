@@ -1,0 +1,24 @@
+name: CI
+on:
+  push:
+    branches: [main]
+  pull_request:
+jobs:
+  checks:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: npm
+          cache-dependency-path: package.json
+      - run: npm install --no-audit --no-fund
+      - run: npm test
+      - run: npm run typecheck
+        env:
+          DATABASE_URL: mysql://user:pass@localhost:3306/carvizo
+      - run: npm run build
+        env:
+          DATABASE_URL: mysql://user:pass@localhost:3306/carvizo
+          CRON_SECRET: build_only_aaaaaaaaaaaaaaaaaaaaaaaaa
