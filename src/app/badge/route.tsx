@@ -1,5 +1,4 @@
 import {ImageResponse} from "next/og";
-export const runtime="edge";
-export async function GET(){
- return new ImageResponse(<div style={{width:"100%",height:"100%",display:"flex",justifyContent:"center",alignItems:"center",background:"#ffffff",color:"#101a28",fontSize:72,fontWeight:900,borderRadius:100}}>C</div>,{width:96,height:96});
-}
+import {BrandMark} from "@/components/brand-mark";
+export const runtime="nodejs";
+export async function GET(){return new ImageResponse(<div style={{width:96,height:96,display:"flex",alignItems:"center",justifyContent:"center",background:"transparent"}}><BrandMark width={92} height={92} monochrome/></div>,{width:96,height:96});}

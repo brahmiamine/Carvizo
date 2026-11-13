@@ -14,7 +14,7 @@ Photos stockées dans `STORAGE_DIR`, servies uniquement aux comptes propriétair
 ## Tests
 `npm test`, `npm run typecheck`, `npm run build`.
 ## Identité visuelle
-Logo : `public/logo.svg` ; icônes générées par Next `src/app/icon.tsx`, `apple-icon.tsx`, `src/app/badge/route.tsx` ; Splash : `public/splash.svg`.
+Logo retenu (proposition 1) : `public/logo.svg` et `public/brand-icon.svg`. Icônes Android 192/512, iOS 180, badge monochrome et splash générés depuis les mêmes tracés (`src/lib/brand-shapes.ts`). Voir `docs/branding.md`.
 ## Licence
 Tous droits réservés. Une licence open source peut être choisie ultérieurement.
 
