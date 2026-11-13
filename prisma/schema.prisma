@@ -2,7 +2,9 @@ generator client {
  provider = "prisma-client"
  output = "../src/generated/prisma"
 }
-datasource db { provider = "mysql" }
+datasource db {
+ provider = "mysql"
+}
 model User {
  id String @id @default(cuid()) @db.VarChar(36)
  email String @unique @db.VarChar(255)
@@ -41,8 +43,20 @@ model Vehicle {
  photos Photo[]
  @@index([ownerId])
 }
-enum EntryKind { MAINTENANCE FUEL ODOMETER TIRE REPAIR ISSUE EXPENSE }
-enum IssueStatus { OPEN IN_PROGRESS RESOLVED }
+enum EntryKind {
+ MAINTENANCE
+ FUEL
+ ODOMETER
+ TIRE
+ REPAIR
+ ISSUE
+ EXPENSE
+}
+enum IssueStatus {
+ OPEN
+ IN_PROGRESS
+ RESOLVED
+}
 model VehicleEvent {
  id String @id @default(cuid()) @db.VarChar(36)
  vehicleId String @db.VarChar(36)
