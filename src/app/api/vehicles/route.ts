@@ -4,7 +4,7 @@ import {error,jsonObject,ok,txt,positiveInt,decimal} from "@/lib/api";
 export const runtime="nodejs";
 export async function GET(){
  const user=await currentUser();if(!user)return error("Connexion requise",401);
- const vehicles=await db.vehicle.findMany({where:{ownerId:user.id},orderBy:{createdAt:"desc"},include:{_count:{select:{events:true,photos:true}}}});
+ const vehicles=await db.vehicle.findMany({where:{ownerId:user.id},orderBy:{createdAt:"desc"},include:{photos:{where:{eventId:null},orderBy:{createdAt:"desc"},take:1,select:{id:true,mime:true}},_count:{select:{events:true,photos:true}}}});
  return ok({vehicles});
 }
 export async function POST(request:Request){

@@ -51,6 +51,8 @@ test("Parcours public : compte, véhicules, incidents, photos privées, rappels"
   const photo=await request("/api/photos",{method:"POST",cookie:cookieA,form});
   assert.equal(photo.response.status,201,JSON.stringify(photo.data));
   const photoId=photo.data.photo.id;
+  const garage=await request("/api/vehicles",{cookie:cookieA});
+  assert.equal(garage.data.vehicles.find(v=>v.id===vehicleId).photos?.[0]?.id,photoId,"photo principale perdue après rechargement du garage");
   const ownPhoto=await request("/api/photos/"+photoId,{cookie:cookieA});
   assert.equal(ownPhoto.response.status,200);
   const emailB="b-"+randomUUID()+"@example.test";
