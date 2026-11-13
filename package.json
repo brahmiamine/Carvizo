@@ -12,23 +12,26 @@
     "db:generate": "prisma generate",
     "db:migrate": "prisma migrate deploy",
     "db:dev": "prisma migrate dev",
-    "db:push": "prisma db push"
+    "db:push": "prisma db push",
+    "test:integration": "node --experimental-strip-types --test tests/smoke.mjs tests/api-features.mjs",
+    "test:browser": "node --test tests/browser-regression.mjs"
   },
   "dependencies": {
+    "@prisma/adapter-mariadb": "7.10.1",
+    "@prisma/client": "7.10.1",
+    "lucide-react": "^0.468.0",
     "next": "^16.0.0",
     "react": "^19.2.0",
     "react-dom": "^19.2.0",
-    "lucide-react": "^0.468.0",
-    "@prisma/client": "7.10.1",
-    "@prisma/adapter-mariadb": "7.10.1",
     "web-push": "^3.6.7"
   },
   "devDependencies": {
-    "prisma": "7.10.1",
-    "typescript": "^5.9.3",
     "@types/node": "^22.0.0",
     "@types/react": "^19.2.0",
     "@types/react-dom": "^19.2.0",
-    "@types/web-push": "^3.6.4"
+    "@types/web-push": "^3.6.4",
+    "playwright": "^1.64.0",
+    "prisma": "7.10.1",
+    "typescript": "^5.9.3"
   }
 }

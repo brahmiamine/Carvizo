@@ -11,7 +11,7 @@ export async function POST(request:Request){
  if(!(file instanceof File))return error("Image manquante");
  if(file.size>5*1024*1024)return error("Image trop grande (5 Mo maximum)",413);
  const bytes=new Uint8Array(await file.arrayBuffer()),mime=detectedMime(bytes);
- if(!mime)return error("Format image non accepté (JPEG, PNG, WebP)",415);
+ if(!mime||(mime==="application/pdf"&&!eventId))return error("Format non accepté (JPEG, PNG, WebP ou facture PDF pour une opération)",415);
  const vehicle=await db.vehicle.findFirst({where:{id:vehicleId,ownerId:user.id}});
  if(!vehicle)return error("Véhicule introuvable",404);
  if(eventId&&!await db.vehicleEvent.findFirst({where:{id:eventId,vehicleId}}))return error("Opération introuvable",404);

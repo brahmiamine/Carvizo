@@ -1,6 +1,7 @@
 export type FuelReading = { mileage:number|null; volumeMl:number|null; fullTank:boolean };
 export function fuelConsumption(readings:FuelReading[]):number|null {
-  const rows=[...readings].filter(r=>Number.isFinite(r.mileage)&&r.mileage!>=0);
+  if(readings.some(r=>r.mileage===null||!Number.isFinite(r.mileage)||r.mileage<0))return null;
+  const rows=[...readings];
   if(rows.some((r,i)=>i>0&&r.mileage!<rows[i-1].mileage!))return null;
   const full=rows.filter(r=>r.fullTank&&r.mileage!==null);
   if(full.length<2)return null;
@@ -16,8 +17,8 @@ export function validateEntry(entry:{kind?:string;title?:string;volumeMl?:number
  if(!['MAINTENANCE','OIL_CHANGE','FUEL','ODOMETER','TIRE','REPAIR','ISSUE','EXPENSE'].includes(entry.kind||''))return 'Type inconnu.';
  if(!entry.title?.trim()||entry.title.length>180)return 'Renseigne un titre (180 caractères max).';
  if(entry.mileage!==undefined&&entry.mileage!==null&&(!Number.isSafeInteger(entry.mileage)||entry.mileage<0))return 'Kilométrage incorrect.';
- if(entry.kind==='ODOMETER'&&entry.mileage==null)return 'Renseigne le kilométrage.';
  if(entry.kind==='FUEL'&&(!entry.volumeMl||!Number.isSafeInteger(entry.volumeMl)||entry.volumeMl<=0))return 'Renseigne un volume positif.';
+ if(['ODOMETER','FUEL'].includes(entry.kind||'')&&entry.mileage==null)return 'Renseigne le kilométrage.';
  if(entry.amountCents!=null&&(!Number.isSafeInteger(entry.amountCents)||entry.amountCents<0))return 'Montant incorrect.';
  return null;
 }
@@ -33,10 +34,11 @@ export function defaultOilDue(mileage:number|null,occurredAt:Date):{nextDueKm:nu
  return {nextDueKm:mileage===null?null:mileage+OIL_INTERVAL_KM,nextDueAt:at};
 }
 
-/** Les `count` prochaines vidanges (km) à partir de la dernière : échéance connue, puis +intervalle. */
-export function projectOilDues(lastMileage:number|null,nextDueKm:number|null,count=3):number[]{
- const interval=lastMileage!==null&&nextDueKm!==null&&nextDueKm>lastMileage?nextDueKm-lastMileage:OIL_INTERVAL_KM;
- const first=nextDueKm??(lastMileage===null?null:lastMileage+interval);
- if(first===null)return [];
+/** Future projections stay anchored to actual service history; overdue service remains separate. */
+export function projectOilDues(lastMileage:number|null,nextDueKm:number|null,currentKm=0,count=3,intervalKm=OIL_INTERVAL_KM):number[]{
+ const interval=lastMileage!==null&&nextDueKm!==null&&nextDueKm>lastMileage?nextDueKm-lastMileage:intervalKm;
+ if(!Number.isSafeInteger(currentKm)||currentKm<0||!Number.isSafeInteger(interval)||interval<=0||!Number.isSafeInteger(count)||count<1||count>100)return [];
+ const anchor=nextDueKm??(lastMileage??currentKm)+interval;
+ const first=anchor>currentKm?anchor:anchor+(Math.floor((currentKm-anchor)/interval)+1)*interval;
  return Array.from({length:count},(_,i)=>first+i*interval);
 }

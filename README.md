@@ -23,3 +23,14 @@ Le job quotidien crée les rappels de kilométrage (30 jours), pression des pneu
 
 ## Tests d'intégration
 La CI démarre une MariaDB 11.4 temporaire, applique le schéma avec `prisma db push`, exécute les tests et compile Next.js. En Docker Compose, un worker appelle l'API des rappels toutes les 6 heures ; les alertes sont dédoublonnées. Initialiser le schéma et configurer les sauvegardes avant ouverture publique.
+
+## Fiabilité du suivi
+Les échéances de vidange sont ancrées sur la dernière vidange effectuée : les trois projections futures et les distances restantes suivent le compteur, tandis qu’une échéance dépassée reste signalée séparément. Sans historique, les échéances sont explicitement estimées. L’intervalle se personnalise à la saisie d’une vidange ; les opérations prévues ne font pas avancer le compteur et leurs devis ne sont pas comptés comme dépenses réalisées.
+
+Les historiques sont paginés ; les totaux, la dernière vidange et les données nécessaires à la consommation sont calculés indépendamment des pages chargées. Une correction du compteur est conservée dans le journal. Pour les anciens véhicules, le kilométrage initial manquant est estimé à partir du plus ancien relevé disponible ; il peut être corrigé dans la fiche du véhicule.
+
+Les factures PDF sont des pièces jointes privées aux opérations. Les exports CSV et la vue imprimable (enregistrement PDF via le navigateur) complètent l’export JSON. Les relevés des véhicules électriques utilisent les kWh ; les pressions mesurées sont conservées dans les notes du contrôle des pneus.
+
+Avant déploiement sur une base existante, appliquer uniquement la migration additive `prisma/manual-migrations/20261113_recovery_code.sql` si la colonne n’existe pas. Voir `docs/account-recovery.md` pour les codes de récupération et les limites de connexion. Le traitement des rappels réessaie les envois transitoirement échoués ; un appareil peut recevoir à nouveau une alerte si un autre appareil avait échoué.
+
+Vérifications : `npm test`, `npm run typecheck`, `npm run build`, `npm run test:integration` sur une base temporaire et `npm run test:browser` après installation Chromium avec `npx playwright install chromium`. Les tests HTTP démarrent leurs propres serveurs sur 3456/3457 ; le test navigateur utilise 3458 et des données simulées sans modifier de compte réel.

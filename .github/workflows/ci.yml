@@ -31,11 +31,18 @@ jobs:
           node-version: "22"
           cache: npm
           cache-dependency-path: package.json
-      - run: npm install --no-audit --no-fund
+      - run: npm ci --no-audit --no-fund
       - run: npm test
       - run: npm run typecheck
       - name: Tester le schéma contre une vraie MariaDB
         run: npx prisma db push
       - run: npm run build
       - name: Test HTTP des parcours et droits d'accès
-        run: node --test tests/smoke.mjs
+        run: npm run test:integration
+      - run: npx playwright install --with-deps chromium
+      - name: Préparer les fichiers statiques et vérifier les parcours navigateur
+        run: |
+          mkdir -p .next/standalone/public .next/standalone/.next/static
+          cp -r public/. .next/standalone/public/
+          cp -r .next/static/. .next/standalone/.next/static/
+          npm run test:browser

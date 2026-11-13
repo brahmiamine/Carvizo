@@ -10,6 +10,6 @@ export async function GET(_request:Request,{params}:Ctx){
  if(!photo)return error("Image introuvable",404);
  try{
   const image=await loadPhoto(photo.storageKey);
-  return new Response(new Uint8Array(image),{headers:{"Content-Type":photo.mime,"Cache-Control":"private, no-store","X-Content-Type-Options":"nosniff"}});
+  return new Response(new Uint8Array(image),{headers:{"Content-Type":photo.mime,"Cache-Control":"private, no-store","X-Content-Type-Options":"nosniff",...(photo.mime==="application/pdf"?{"Content-Disposition":'attachment; filename="facture.pdf"'}:{})}});
  }catch{return error("Image indisponible",404)}
 }

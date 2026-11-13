@@ -39,6 +39,7 @@ test("Parcours public : compte, véhicules, incidents, photos privées, rappels"
   assert.equal(a.response.status,201,JSON.stringify(a.data));
   const cookieA=a.response.headers.get("set-cookie")?.split(";")[0]||"";
   assert.ok(cookieA.startsWith("carvizo_session="),"cookie de session absent");
+  assert.match(a.data.recoveryCode,/^([a-f0-9]{8}-){5}[a-f0-9]{8}$/);
   const missing=await request("/api/vehicles");
   assert.equal(missing.response.status,401);
   const vehicle=await request("/api/vehicles",{method:"POST",cookie:cookieA,body:{make:"Skoda",model:"Fabia",year:2018,currentKm:25000,frontPressureBar:2.2,rearPressureBar:2.1}});
@@ -56,6 +57,16 @@ test("Parcours public : compte, véhicules, incidents, photos privées, rappels"
   const photo=await request("/api/photos",{method:"POST",cookie:cookieA,form});
   assert.equal(photo.response.status,201,JSON.stringify(photo.data));
   const photoId=photo.data.photo.id;
+  const invoiceForm=new FormData();
+  invoiceForm.set("vehicleId",vehicleId);invoiceForm.set("eventId",issueId);
+  invoiceForm.set("file",new Blob(["%PDF-1.7\n%%EOF"],{type:"application/pdf"}),"facture.pdf");
+  const invoice=await request("/api/photos",{method:"POST",cookie:cookieA,form:invoiceForm});
+  assert.equal(invoice.response.status,201,JSON.stringify(invoice.data));
+  const ownInvoice=await request("/api/photos/"+invoice.data.photo.id,{cookie:cookieA});
+  assert.equal(ownInvoice.response.status,200);
+  assert.equal(ownInvoice.response.headers.get("content-type"),"application/pdf");
+  assert.match(ownInvoice.response.headers.get("content-disposition"),/attachment/);
+
   const vehicleImage=new FormData();
   vehicleImage.set("vehicleId",vehicleId);
   vehicleImage.set("file",new Blob([Buffer.from("iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVQIHWP4////fwAJ+wP+J5sVRAAAAABJRU5ErkJggg==","base64")],{type:"image/png"}),"voiture.png");
@@ -71,10 +82,11 @@ test("Parcours public : compte, véhicules, incidents, photos privées, rappels"
   const cookieB=b.response.headers.get("set-cookie")?.split(";")[0]||"";
   assert.equal((await request("/api/vehicles/"+vehicleId,{cookie:cookieB})).response.status,404);
   assert.equal((await request("/api/photos/"+photoId,{cookie:cookieB})).response.status,404);
+  assert.equal((await request("/api/photos/"+invoice.data.photo.id,{cookie:cookieB})).response.status,404);
   const patched=await request("/api/entries/"+issueId,{method:"PATCH",cookie:cookieA,body:{status:"IN_PROGRESS"}});
   assert.equal(patched.response.status,200,JSON.stringify(patched.data));
   assert.equal(patched.data.entry.status,"IN_PROGRESS");
-  const service=await request("/api/entries",{method:"POST",cookie:cookieA,body:{vehicleId,kind:"MAINTENANCE",title:"Vidange",mileage:25000,nextDueKm:25200}});
+  const service=await request("/api/entries",{method:"POST",cookie:cookieA,body:{vehicleId,kind:"MAINTENANCE",title:"Vidange",status:"OPEN",mileage:25000,nextDueKm:25200}});
   assert.equal(service.response.status,201,JSON.stringify(service.data));
   const cron=await request("/api/jobs/reminders",{method:"POST",headers:{Authorization:"Bearer "+process.env.CRON_SECRET}});
   assert.equal(cron.response.status,200,JSON.stringify(cron.data));
@@ -84,6 +96,44 @@ test("Parcours public : compte, véhicules, incidents, photos privées, rappels"
   const entries=await request("/api/entries?vehicleId="+vehicleId,{cookie:cookieA});
   assert.equal(entries.response.status,200);
   assert.ok(entries.data.entries.length>=2);
+  assert.equal((await request("/api/profile?format=csv")).response.status,401);
+  for(const format of ["csv","print"]){
+   const exported=await request("/api/profile?format="+format,{cookie:cookieA});
+   assert.equal(exported.response.status,200);
+   assert.ok(exported.data.text.includes("Vidange"));
+  }
+  const unsafePush=await request("/api/push",{method:"POST",cookie:cookieA,body:{endpoint:"https://127.0.0.1/admin",keys:{p256dh:"invalid",auth:"invalid"}}});
+  assert.equal(unsafePush.response.status,400);
+  const publicPush=await request("/api/push");assert.equal(publicPush.response.status,200);
+  assert.equal(typeof publicPush.data.enabled,"boolean");
+  const resetBody={email:emailA,password:"NewPasswordForRecovery!2026"};
+  const invalidReset=await request("/api/auth/reset-password",{method:"POST",body:{...resetBody,recoveryCode:"wrong"}});
+  assert.equal(invalidReset.response.status,401);
+  assert.equal((await request("/api/auth/me",{cookie:cookieA})).response.status,200);
+  const reset=await request("/api/auth/reset-password",{method:"POST",body:{...resetBody,recoveryCode:a.data.recoveryCode}});
+  assert.equal(reset.response.status,200,JSON.stringify(reset.data));
+  assert.notEqual(reset.data.recoveryCode,a.data.recoveryCode);
+  const resetCookie=reset.response.headers.get("set-cookie")?.split(";")[0]||"";
+  assert.equal((await request("/api/auth/me",{cookie:cookieA})).response.status,401,"old session survived recovery");
+  const reused=await request("/api/auth/reset-password",{method:"POST",body:{...resetBody,recoveryCode:a.data.recoveryCode}});
+  assert.equal(reused.response.status,401,"recovery code was reusable");
+  const oldLogin=await request("/api/auth/login",{method:"POST",body:{email:emailA,password:"MotDePasseLong!2026"}});
+  assert.equal(oldLogin.response.status,401);
+  const login=await request("/api/auth/login",{method:"POST",body:resetBody});
+  assert.equal(login.response.status,200);
+  const loginCookie=login.response.headers.get("set-cookie")?.split(";")[0]||"";
+  const newPassword="ChangedPasswordForAccount!2026";
+  const changed=await request("/api/auth/change-password",{method:"POST",cookie:resetCookie,body:{currentPassword:resetBody.password,password:newPassword}});
+  assert.equal(changed.response.status,200,JSON.stringify(changed.data));
+  const changedCookie=changed.response.headers.get("set-cookie")?.split(";")[0]||"";
+  for(const cookie of [resetCookie,loginCookie])assert.equal((await request("/api/auth/me",{cookie})).response.status,401,"old session survived password change");
+  assert.equal((await request("/api/auth/me",{cookie:changedCookie})).response.status,200);
+  const regenerated=await request("/api/auth/recovery-code",{method:"POST",cookie:changedCookie,body:{password:newPassword}});
+  assert.equal(regenerated.response.status,200,JSON.stringify(regenerated.data));
+  assert.notEqual(regenerated.data.recoveryCode,reset.data.recoveryCode);
+  assert.equal((await request("/api/profile",{method:"DELETE",cookie:changedCookie,body:{password:newPassword}})).response.status,200);
+  assert.equal((await request("/api/profile",{method:"DELETE",cookie:cookieB,body:{password:"MotDePasseLong!2026"}})).response.status,200);
+
  }finally{
   server.kill("SIGTERM");
  }
