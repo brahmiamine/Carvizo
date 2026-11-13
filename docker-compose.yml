@@ -32,6 +32,21 @@ services:
         condition: service_healthy
     ports:
       - "127.0.0.1:3000:3000"
+  reminder-worker:
+    image: curlimages/curl:8.10.1
+    restart: unless-stopped
+    environment:
+      CRON_SECRET: ${CRON_SECRET:?CRON_SECRET requis}
+    depends_on:
+      - web
+    entrypoint: ["/bin/sh", "-c"]
+    command: >
+      while true; do
+        curl -fsS -X POST -H "Authorization: Bearer $${CRON_SECRET}"
+        http://web:3000/api/jobs/reminders || true;
+        sleep 21600;
+      done
+
 volumes:
   mariadb_data:
   uploads:

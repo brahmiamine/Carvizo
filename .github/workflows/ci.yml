@@ -6,6 +6,24 @@ on:
 jobs:
   checks:
     runs-on: ubuntu-latest
+    services:
+      mariadb:
+        image: mariadb:11.4
+        env:
+          MARIADB_DATABASE: carvizo_ci
+          MARIADB_USER: carvizo
+          MARIADB_PASSWORD: carvizo_ci_pass
+          MARIADB_ROOT_PASSWORD: carvizo_root_ci_pass
+        ports:
+          - 3306:3306
+        options: >-
+          --health-cmd="healthcheck.sh --connect --innodb_initialized"
+          --health-interval=10s
+          --health-timeout=5s
+          --health-retries=12
+    env:
+      DATABASE_URL: mysql://carvizo:carvizo_ci_pass@127.0.0.1:3306/carvizo_ci
+      CRON_SECRET: ci_only_aaaaaaaaaaaaaaaaaaaaaaaaa
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
@@ -16,9 +34,6 @@ jobs:
       - run: npm install --no-audit --no-fund
       - run: npm test
       - run: npm run typecheck
-        env:
-          DATABASE_URL: mysql://user:pass@localhost:3306/carvizo
+      - name: Tester le schéma contre une vraie MariaDB
+        run: npx prisma db push
       - run: npm run build
-        env:
-          DATABASE_URL: mysql://user:pass@localhost:3306/carvizo
-          CRON_SECRET: build_only_aaaaaaaaaaaaaaaaaaaaaaaaa

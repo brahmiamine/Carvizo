@@ -20,3 +20,6 @@ Tous droits réservés. Une licence open source peut être choisie ultérieureme
 
 ## Alertes et images
 Le job quotidien crée les rappels de kilométrage (30 jours), pression des pneus (30 jours depuis le dernier contrôle) et entretiens configurés. Limites de photos : 3 par véhicule et 4 par événement ; JPEG/PNG/WebP 5 Mo maximum. L'écran de lancement `/splash` est un PNG généré pour les appareils compatibles ; tous les modèles iOS ne garantissent pas la même prise en charge.
+
+## Tests d'intégration
+La CI démarre une MariaDB 11.4 temporaire, applique le schéma avec `prisma db push`, exécute les tests et compile Next.js. En Docker Compose, un worker appelle l'API des rappels toutes les 6 heures ; les alertes sont dédoublonnées. Initialiser le schéma et configurer les sauvegardes avant ouverture publique.
