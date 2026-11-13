@@ -37,3 +37,5 @@ jobs:
       - name: Tester le schéma contre une vraie MariaDB
         run: npx prisma db push
       - run: npm run build
+      - name: Test HTTP des parcours et droits d'accès
+        run: node --test tests/smoke.mjs
