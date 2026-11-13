@@ -32,3 +32,11 @@ export function defaultOilDue(mileage:number|null,occurredAt:Date):{nextDueKm:nu
  const at=new Date(occurredAt);at.setMonth(at.getMonth()+OIL_INTERVAL_MONTHS);
  return {nextDueKm:mileage===null?null:mileage+OIL_INTERVAL_KM,nextDueAt:at};
 }
+
+/** Les `count` prochaines vidanges (km) à partir de la dernière : échéance connue, puis +intervalle. */
+export function projectOilDues(lastMileage:number|null,nextDueKm:number|null,count=3):number[]{
+ const interval=lastMileage!==null&&nextDueKm!==null&&nextDueKm>lastMileage?nextDueKm-lastMileage:OIL_INTERVAL_KM;
+ const first=nextDueKm??(lastMileage===null?null:lastMileage+interval);
+ if(first===null)return [];
+ return Array.from({length:count},(_,i)=>first+i*interval);
+}

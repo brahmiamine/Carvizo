@@ -1,6 +1,6 @@
 import {db} from "@/lib/db";
 import {error,ok} from "@/lib/api";
-import {reminderWindow,shouldAskOdometer,shouldAskTireCheck} from "@/lib/metrics";
+import {projectOilDues,reminderWindow,shouldAskOdometer,shouldAskTireCheck} from "@/lib/metrics";
 import webpush from "web-push";
 export const runtime="nodejs";
 export const dynamic="force-dynamic";
@@ -31,7 +31,7 @@ export async function POST(request:Request){
  if(!secret||secret.length<24)return error("Cron non configuré",503);
  if(request.headers.get("authorization")!==`Bearer ${secret}`)return error("Non autorisé",401);
  const now=new Date(),month=now.toISOString().slice(0,7),push=configured();
- const vehicles=await db.vehicle.findMany({take:1000,include:{events:{where:{OR:[{kind:{in:["MAINTENANCE","OIL_CHANGE"]},OR:[{nextDueAt:{not:null}},{nextDueKm:{not:null}}]},{kind:"TIRE"}]},select:{id:true,kind:true,title:true,occurredAt:true,nextDueAt:true,nextDueKm:true}}}});
+ const vehicles=await db.vehicle.findMany({take:1000,include:{events:{where:{OR:[{kind:{in:["MAINTENANCE","OIL_CHANGE"]},OR:[{nextDueAt:{not:null}},{nextDueKm:{not:null}}]},{kind:"TIRE"}]},select:{id:true,kind:true,title:true,mileage:true,occurredAt:true,nextDueAt:true,nextDueKm:true}}}});
  let created=0;
  for(const vehicle of vehicles){
   if(shouldAskOdometer(vehicle.lastOdometerAt,now)){
@@ -44,10 +44,18 @@ export async function POST(request:Request){
   const lastOil=vehicle.events.filter(e=>e.kind==="OIL_CHANGE").sort((a,b)=>b.occurredAt.getTime()-a.occurredAt.getTime())[0];
   if(lastOil){
    const byDate=lastOil.nextDueAt!==null&&lastOil.nextDueAt.getTime()<=now.getTime()+30*86400000;
-   const byKm=lastOil.nextDueKm!==null&&reminderWindow(vehicle.currentKm,lastOil.nextDueKm,1000);
-   if(byDate||byKm){
-    const hint=byKm?`Échéance à ${lastOil.nextDueKm} km (actuel : ${vehicle.currentKm} km)`:`Échéance le ${lastOil.nextDueAt!.toLocaleDateString("fr-FR")}`;
-    if(await notify(vehicle.ownerId,`oil:${lastOil.id}`,"Vidange à prévoir",`${vehicle.make} ${vehicle.model} · ${hint}`,push))created++;
+   const remaining=lastOil.nextDueKm===null?null:lastOil.nextDueKm-vehicle.currentKm;
+   if(remaining!==null){
+    // Alertes anticipées : 2000 km, 500 km, puis dépassement.
+    const stage=remaining<=0?"late":remaining<=500?"500":remaining<=2000?"2000":null;
+    if(stage){
+     const next3=projectOilDues(lastOil.mileage,lastOil.nextDueKm).map(k=>k.toLocaleString("fr-FR")).join(" · ");
+     const msg=remaining<=0?`Vidange dépassée de ${-remaining} km (échéance ${lastOil.nextDueKm} km).`:`Vidange dans ${remaining} km (à ${lastOil.nextDueKm} km).`;
+     if(await notify(vehicle.ownerId,`oil:${lastOil.id}:${stage}`,remaining<=0?"Vidange en retard":"Vidange bientôt",`${vehicle.make} ${vehicle.model} · ${msg} Prochaines : ${next3} km`,push))created++;
+    }
+   }
+   if(byDate){
+    if(await notify(vehicle.ownerId,`oil:${lastOil.id}:date`,"Vidange à prévoir",`${vehicle.make} ${vehicle.model} · Échéance le ${lastOil.nextDueAt!.toLocaleDateString("fr-FR")}`,push))created++;
    }
   }
   for(const e of vehicle.events){
