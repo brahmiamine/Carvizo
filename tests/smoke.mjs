@@ -32,7 +32,7 @@ test("Parcours public : compte, véhicules, incidents, photos privées, rappels"
   for(const path of ["/icon","/icon-192","/apple-icon","/badge","/splash"]){
    const image=await fetch(origin+path);
    assert.equal(image.status,200,"Échec génération de "+path);
-   assert.match(image.headers.get("content-type")||"",/image\\/png/,"Type d'image invalide : "+path);
+   assert.ok((image.headers.get("content-type")||"").startsWith("image/png"),"Type d’image invalide : "+path);
   }
   const emailA="a-"+randomUUID()+"@example.test";
   const a=await request("/api/auth/signup",{method:"POST",body:{name:"Alice",email:emailA,password:"MotDePasseLong!2026"}});
