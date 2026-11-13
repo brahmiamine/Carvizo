@@ -1,114 +1,132 @@
 generator client {
- provider = "prisma-client"
- output = "../src/generated/prisma"
+  provider = "prisma-client"
+  output   = "../src/generated/prisma"
 }
+
 datasource db {
- provider = "mysql"
+  provider = "mysql"
 }
+
 model User {
- id String @id @default(cuid()) @db.VarChar(36)
- email String @unique @db.VarChar(255)
- name String @db.VarChar(100)
- passwordHash String @db.VarChar(255)
- recoveryCodeHash String? @db.VarChar(64)
- createdAt DateTime @default(now())
- vehicles Vehicle[]
- sessions Session[]
- subscriptions PushSubscription[]
- notifications Notification[]
+  id               String             @id @default(cuid()) @db.VarChar(36)
+  email            String             @unique @db.VarChar(255)
+  name             String             @db.VarChar(100)
+  passwordHash     String             @db.VarChar(255)
+  recoveryCodeHash String?            @db.VarChar(64)
+  currency         String             @default("EUR") @db.VarChar(3)
+  createdAt        DateTime           @default(now())
+  vehicles         Vehicle[]
+  sessions         Session[]
+  subscriptions    PushSubscription[]
+  notifications    Notification[]
 }
+
 model Session {
- id String @id @default(cuid()) @db.VarChar(36)
- tokenHash String @unique @db.VarChar(64)
- userId String @db.VarChar(36)
- expiresAt DateTime
- user User @relation(fields:[userId],references:[id],onDelete:Cascade)
- @@index([userId,expiresAt])
+  id        String   @id @default(cuid()) @db.VarChar(36)
+  tokenHash String   @unique @db.VarChar(64)
+  userId    String   @db.VarChar(36)
+  expiresAt DateTime
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, expiresAt])
 }
+
 model Vehicle {
- id String @id @default(cuid()) @db.VarChar(36)
- ownerId String @db.VarChar(36)
- owner User @relation(fields:[ownerId],references:[id],onDelete:Cascade)
- make String @db.VarChar(80)
- model String @db.VarChar(80)
- name String? @db.VarChar(100)
- year Int?
- registration String? @db.VarChar(32)
- fuelType String @default("ESSENCE") @db.VarChar(32)
- currentKm Int @default(0)
- lastOdometerAt DateTime?
- frontPressureBar Float?
- rearPressureBar Float?
- createdAt DateTime @default(now())
- events VehicleEvent[]
- photos Photo[]
- @@index([ownerId])
+  id               String         @id @default(cuid()) @db.VarChar(36)
+  ownerId          String         @db.VarChar(36)
+  owner            User           @relation(fields: [ownerId], references: [id], onDelete: Cascade)
+  make             String         @db.VarChar(80)
+  model            String         @db.VarChar(80)
+  name             String?        @db.VarChar(100)
+  year             Int?
+  registration     String?        @db.VarChar(32)
+  fuelType         String         @default("ESSENCE") @db.VarChar(32)
+  currentKm        Int            @default(0)
+  lastOdometerAt   DateTime?
+  frontPressureBar Float?
+  rearPressureBar  Float?
+  createdAt        DateTime       @default(now())
+  events           VehicleEvent[]
+  photos           Photo[]
+
+  @@index([ownerId])
 }
+
 enum EntryKind {
- MAINTENANCE
- OIL_CHANGE
- FUEL
- ODOMETER
- TIRE
- REPAIR
- ISSUE
- EXPENSE
+  MAINTENANCE
+  OIL_CHANGE
+  FUEL
+  ODOMETER
+  TIRE
+  REPAIR
+  ISSUE
+  EXPENSE
 }
+
 enum IssueStatus {
- OPEN
- IN_PROGRESS
- RESOLVED
+  OPEN
+  IN_PROGRESS
+  RESOLVED
 }
+
 model VehicleEvent {
- id String @id @default(cuid()) @db.VarChar(36)
- vehicleId String @db.VarChar(36)
- vehicle Vehicle @relation(fields:[vehicleId],references:[id],onDelete:Cascade)
- kind EntryKind
- title String @db.VarChar(180)
- notes String? @db.Text
- occurredAt DateTime @default(now())
- mileage Int?
- amountCents Int?
- volumeMl Int?
- fullTank Boolean @default(false)
- status IssueStatus @default(RESOLVED)
- nextDueKm Int?
- nextDueAt DateTime?
- createdAt DateTime @default(now())
- photos Photo[]
- @@index([vehicleId,kind,occurredAt])
- @@index([nextDueAt])
+  id          String      @id @default(cuid()) @db.VarChar(36)
+  vehicleId   String      @db.VarChar(36)
+  vehicle     Vehicle     @relation(fields: [vehicleId], references: [id], onDelete: Cascade)
+  kind        EntryKind
+  title       String      @db.VarChar(180)
+  notes       String?     @db.Text
+  occurredAt  DateTime    @default(now())
+  mileage     Int?
+  // Legacy name: stores EUR cents or TND millimes according to currency.
+  amountCents Int?
+  currency    String      @default("EUR") @db.VarChar(3)
+  volumeMl    Int?
+  fullTank    Boolean     @default(false)
+  status      IssueStatus @default(RESOLVED)
+  nextDueKm   Int?
+  nextDueAt   DateTime?
+  createdAt   DateTime    @default(now())
+  photos      Photo[]
+
+  @@index([vehicleId, kind, occurredAt])
+  @@index([nextDueAt])
 }
+
 model Photo {
- id String @id @default(cuid()) @db.VarChar(36)
- vehicleId String @db.VarChar(36)
- vehicle Vehicle @relation(fields:[vehicleId],references:[id],onDelete:Cascade)
- eventId String? @db.VarChar(36)
- event VehicleEvent? @relation(fields:[eventId],references:[id],onDelete:Cascade)
- storageKey String @unique @db.VarChar(100)
- mime String @db.VarChar(30)
- createdAt DateTime @default(now())
- @@index([vehicleId])
+  id         String        @id @default(cuid()) @db.VarChar(36)
+  vehicleId  String        @db.VarChar(36)
+  vehicle    Vehicle       @relation(fields: [vehicleId], references: [id], onDelete: Cascade)
+  eventId    String?       @db.VarChar(36)
+  event      VehicleEvent? @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  storageKey String        @unique @db.VarChar(100)
+  mime       String        @db.VarChar(30)
+  createdAt  DateTime      @default(now())
+
+  @@index([vehicleId])
 }
+
 model PushSubscription {
- id String @id @default(cuid()) @db.VarChar(36)
- userId String @db.VarChar(36)
- user User @relation(fields:[userId],references:[id],onDelete:Cascade)
- endpointHash String @unique @db.VarChar(64)
- endpoint String @db.Text
- p256dh String @db.VarChar(255)
- auth String @db.VarChar(255)
- createdAt DateTime @default(now())
+  id           String   @id @default(cuid()) @db.VarChar(36)
+  userId       String   @db.VarChar(36)
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  endpointHash String   @unique @db.VarChar(64)
+  endpoint     String   @db.Text
+  p256dh       String   @db.VarChar(255)
+  auth         String   @db.VarChar(255)
+  createdAt    DateTime @default(now())
 }
+
 model Notification {
- id String @id @default(cuid()) @db.VarChar(36)
- userId String @db.VarChar(36)
- user User @relation(fields:[userId],references:[id],onDelete:Cascade)
- dedupeKey String @db.VarChar(180)
- title String @db.VarChar(180)
- body String @db.VarChar(500)
- createdAt DateTime @default(now())
- readAt DateTime?
- @@unique([userId,dedupeKey])
- @@index([userId,createdAt])
+  id        String    @id @default(cuid()) @db.VarChar(36)
+  userId    String    @db.VarChar(36)
+  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  dedupeKey String    @db.VarChar(180)
+  title     String    @db.VarChar(180)
+  body      String    @db.VarChar(500)
+  createdAt DateTime  @default(now())
+  readAt    DateTime?
+
+  @@unique([userId, dedupeKey])
+  @@index([userId, createdAt])
 }

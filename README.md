@@ -34,3 +34,14 @@ Les factures PDF sont des pièces jointes privées aux opérations. Les exports 
 Avant déploiement sur une base existante, appliquer uniquement la migration additive `prisma/manual-migrations/20261113_recovery_code.sql` si la colonne n’existe pas. Voir `docs/account-recovery.md` pour les codes de récupération et les limites de connexion. Le traitement des rappels réessaie les envois transitoirement échoués ; un appareil peut recevoir à nouveau une alerte si un autre appareil avait échoué.
 
 Vérifications : `npm test`, `npm run typecheck`, `npm run build`, `npm run test:integration` sur une base temporaire et `npm run test:browser` après installation Chromium avec `npx playwright install chromium`. Les tests HTTP démarrent leurs propres serveurs sur 3456/3457 ; le test navigateur utilise 3458 et des données simulées sans modifier de compte réel.
+
+## Navigation et préférences
+Sur mobile, les rappels s’ouvrent depuis la cloche de l’en-tête ; ils restent présents dans la navigation sur ordinateur. La page et le véhicule sélectionnés sont conservés dans l’URL, y compris après actualisation et avec les boutons précédent/suivant du navigateur.
+
+Le profil propose les thèmes clair, sombre ou système. Le choix est enregistré dans le navigateur et appliqué avant l’affichage de la page. La devise préférée (EUR/TND) est enregistrée sur le compte et utilisée pour les nouvelles opérations. Chaque opération conserve sa propre devise : les euros utilisent des centimes, les dinars des millimes. Les totaux sont présentés séparément par devise, sans conversion automatique. Le nom historique `amountCents` représente désormais les unités mineures de la devise enregistrée.
+
+Les relevés compteur, y compris le relevé initial et les corrections, peuvent être modifiés dans l’historique. Les modifications des relevés protégés sont journalisées et recalculent le compteur sans supprimer leur rôle de référence.
+
+Appliquer la migration additive et idempotente `prisma/manual-migrations/20261113_currency.sql` avant de déployer cette version sur une base existante. Les anciennes opérations restent en EUR.
+
+L’interface est organisée dans `src/components/carvizo/` : écrans, formulaires, navigation, préférences, types et fonctions partagés. Les règles monétaires et la livraison des notifications sont isolées dans `src/lib/`. La CI vérifie le formatage, TypeScript strict (dont le code inutilisé), les tests unitaires, les parcours HTTP et les parcours navigateur sur mobile et ordinateur.
